@@ -21,7 +21,7 @@ class ImportRap extends Component {
     projectId: PropTypes.string
   };
 
-  formatDeep(key) {
+  formatDeep(key,scope,parentId) {
     let res_body = {
       properties: {},
       required: [],
@@ -29,48 +29,16 @@ class ImportRap extends Component {
       type: "object"
     }
     key.forEach(rp => {
-      let identifier =rp.identifier.split('|')[0]
-      res_body.required.push(identifier)
-      let decorate = rp.identifier.split('|')[1]
-      // rp.dataType.match(/array<(.*)>/
-      if(rp.dataType.match(/array<(.*)>/)) {
-        let type = rp.dataType.match(/array<(.*)>/)[1]
-        if(type == 'object'){
-          let len = decorate || '1'
-          res_body.properties[identifier]={
-            items: this.formatDeep(rp.parameterList),
-            maxItems: len.split('-')[0],
-            minItems: len.split('-')[1] || len.split('-')[0],
-            type: "array"
-          }
-        } else {
-          let arr = []
-          if(rp.remark){
-            let mocksr = JSON.parse(rp.remark.replace('@mock=',''))
-            arr = mocksr.indexOf('$order') > -1 ? mocksr.split('$order')[1].replace(/[()\'\"]/g,'').split(',') : []
-          }
-          res_body.properties[identifier]={
-            items: {
-              mock:{
-                mock: type=='number' ? '@integer(1, 999999)' : ('@'+type)
-              },
-              type
-            },
-            type: 'array',
-            maxItems: arr.length || 1,
-            minItems: arr.length || 1
-          }
-        }
+      if (rp.scope === scope && rp.parentId === parentId) {
+        let identifier = rp.name;
+        res_body.required.push(identifier);
         
-      } else {
-        let mock = rp.remark ? rp.remark.replace('@mock=','').replace(/[\'\"]/g,'') : ''
-        let arr = mock && mock.indexOf('$order') > -1 ? mock.split('$order')[1].replace(/[()\'\"]/g,'').split(',') : []
-        let len = decorate && decorate.indexOf('+') < 0 && decorate.indexOf('.') < 0 ? decorate : 0
+        let mock = rp.rule ? rp.rule.replace('@mock=','').replace(/[\'\"]/g,'') : ''
         let rule
-        if(rp.dataType=='number'){
-          if(decorate && decorate.indexOf('+') > -1) {
-            rule = `@increment(${decorate.replace('+','')})`
-          } else if(decorate && decorate.indexOf('.') > -1) {
+        if(rp.type=='number'){
+          if(mock && mock.indexOf('+') > -1) {
+            rule = `@increment(${mock.replace('+','')})`
+          } else if(mock && mock.indexOf('.') > -1) {
             rule = '@float(1, 999999, 1, 10)'
           } else{
             rule = mock ? mock : '@integer(1, 999999)'
@@ -80,105 +48,102 @@ class ImportRap extends Component {
         }
         
         let ps = {
-          description: rp.name,
-          mock: rule ? { mock: rule } : undefined,
-          default: arr.length === 0 ? mock : undefined,
-          type: rp.dataType,
-          minLength: len ? len.split('-')[0] : undefined,
-          maxLength: len ? (len.split('-')[1] ? len.split('-')[1] : len.split('-')[0]) : undefined
+          description: rp.description,
+          mock: rule ? { mock: rule } : rp.value ? { mock: rp.vaule } : undefined,
+          type: rp.type.toLowerCase(),
         }
-        if(arr.length > 0){
-          delete ps.mock
-          delete ps.description
-          ps.enum = arr
-        }
-        if(rp.parameterList.length === 0){
-          res_body.properties[identifier] = ps
-        } else {
-          res_body.properties[identifier] = this.formatDeep(rp.parameterList)
-        }
+
+        let child = this.formatDeep(key,scope,rp.id);
+        if (child && child.required.length > 0) res_body.properties[identifier] = child;
+        else res_body.properties[identifier] = ps;
       }
     })
     return res_body
   }
 
-  addInterface(pageList, catid){
-    pageList.forEach(j=>{
-      let fName = j.name && j.name!=='某页面' ? `[${j.name}] - ` : ''
-      j.actionList.forEach( t => {
-        if(t.requestUrl){
-          let rm = t.requestType === '1' ? 'GET' : t.requestType === '2' ? 'POST' : t.requestType === '3' ? 'PUT' : 'DELETE'
-          let createParams = {
-            catid,
-            method: rm,
-            path: t.requestUrl[0]=='/' ? t.requestUrl : `/${t.requestUrl}`,
-            project_id: this.props.match.params.id,
-            title: `${fName}${t.name}`
-          }
-          axios.post('/api/interface/add',createParams).then(res3 => {
-            if(res3.data.errcode !== 0){
-              message.error(`插入${fName}${t.name}失败: ${res3.data.errmsg}`);
-              console.error(`插入${fName}${t.name}失败: ${res3.data.errmsg}`);
-              return false
-            }
-            let interface_id = res3.data.data._id
-            let req_query = []
-            let req_body_other = {
-              properties: {},
-              required: [],
-              title: "empty object",
-              type: "object"
-            }
-            if(rm === 'GET') {
-              t.requestParameterList.forEach( rp => {
-                req_query.push({
-                  desc: rp.name,
-                  example: rp.remark.replace('@mock=','').replace(/[\'\"]/g,''),
-                  name: rp.identifier,
-                  required: "1"
-                })
-              })
-            } else {
-              req_body_other = this.formatDeep(t.requestParameterList)
-            }
-
-            let res_body = this.formatDeep(t.responseParameterList)
-
-            let upparams = Object.assign({
-              api_opened: false,
-              catid: '',
-              desc: '',
-              id: interface_id,
-              markdown: '',
-              method: '',
-              path: '',
-              req_body_form: [],
-              req_body_is_json_schema: true,
-              req_body_other: rm === 'GET' ? undefined : JSON.stringify(req_body_other),
-              req_body_type: rm === 'GET' ? undefined : 'json',
-              req_headers: rm === 'GET' ? [] : [{name: "Content-Type", value: "application/json"}],
-              req_params: [],
-              req_query: rm === 'GET' ? req_query : undefined,
-              res_body: JSON.stringify(res_body),
-              res_body_is_json_schema: true,
-              res_body_type: 'json',
-              status: 'done',
-              switch_notice: true,
-              tag: [],
-              title: ''
-            }, createParams)
-            delete upparams.project_id
-            axios.post('/api/interface/up', upparams).then(upres => {
-              if(upres.data.errcode === 0){
-                message.success(`插入接口${fName}${t.name}成功`);
-              } else {
-                message.error(`插入接口${fName}${t.name}失败: ${upres.data.errmsg}`)
-                console.error(`插入接口${fName}${t.name}失败: ${upres.data.errmsg}`)
-              }
-            })
-          })
+  addInterface(interfaces, catid){
+    interfaces.forEach(j=>{
+      let fName = j.name || j.id;
+      if(j.url){        
+        let rm = j.method;
+        let url = `/${j.id}`;
+        if (j.url[0] == '/') url = j.url;
+        else if (j.url.startsWith('http://'))  url = j.url.substr(j.url.indexOf('/',7));
+        else if (j.url.startsWith('https://')) url = j.url.substr(j.url.indexOf('/',8));
+        else url = `/${j.url}`;
+        
+        let createParams = {
+          catid,
+          method: rm,
+          path: url,
+          project_id: this.props.match.params.id,
+          title: `${fName}`,
+          desc: j.description
         }
-      })
+        axios.post('/api/interface/add',createParams).then(res3 => {
+          if(res3.data.errcode !== 0){
+            message.error(`插入${fName}失败: ${res3.data.errmsg}`);
+            console.error(`插入${fName}失败: ${res3.data.errmsg}`);
+            return false
+          }
+          let interface_id = res3.data.data._id
+          let req_query = []
+          let req_body_other = {
+            properties: {},
+            required: [],
+            title: "empty object",
+            type: "object"
+          }
+          if(rm === 'GET') {
+            j.properties.forEach( rp => {
+              req_query.push({
+                desc: rp.name,
+                example: rp.remark.replace('@mock=','').replace(/[\'\"]/g,''),
+                name: rp.identifier,
+                required: "1"
+              })
+            })
+          } else {
+            req_body_other = this.formatDeep(j.properties,'request',-1)
+            console.log('req_body_other=>', req_body_other);            
+          }
+          let res_body = this.formatDeep(j.properties,'response',-1)
+          console.log('res_body=>', res_body);
+
+          let upparams = Object.assign({
+            api_opened: false,
+            catid: '',
+            desc: '',
+            id: interface_id,
+            markdown: '',
+            method: '',
+            path: '',
+            req_body_form: [],
+            req_body_is_json_schema: true,
+            req_body_other: rm === 'GET' ? undefined : JSON.stringify(req_body_other),
+            req_body_type: rm === 'GET' ? undefined : 'json',
+            req_headers: rm === 'GET' ? [] : [{name: "Content-Type", value: "application/json"}],
+            req_params: [],
+            req_query: rm === 'GET' ? req_query : undefined,
+            res_body: JSON.stringify(res_body),
+            res_body_is_json_schema: true,
+            res_body_type: 'json',
+            status: 'done',
+            switch_notice: true,
+            tag: [],
+            title: ''
+          }, createParams)
+          delete upparams.project_id
+          axios.post('/api/interface/up', upparams).then(upres => {
+            if(upres.data.errcode === 0){
+              message.success(`插入接口${fName}成功`);
+            } else {
+              message.error(`插入接口${fName}失败: ${upres.data.errmsg}`)
+              console.error(`插入接口${fName}失败: ${upres.data.errmsg}`)
+            }
+          })
+        })
+      }
     })
   }
 
@@ -194,9 +159,10 @@ class ImportRap extends Component {
       message.error(res.data.errmsg||'[请检查projectID是否存在]')
       return false
     }
- 
-    res.data.data.moduleList.forEach( e=> {
+    
+    res.data.data.modules.forEach( e=> {
       let moduleName = (e.name == '' || e.name=='某模块（点击编辑后双击修改）') ? res.data.data.name : e.name
+      console.log(moduleName)
       axios.post('/api/interface/add_cat', {
         desc: moduleName,
         name: moduleName,
@@ -205,7 +171,7 @@ class ImportRap extends Component {
         if(res2.data.errcode === 0){
           message.success(`新增接口分类[${moduleName}]成功`);
           let catid = res2.data.data._id
-          this.addInterface(e.pageList, catid)
+          this.addInterface(e.interfaces, catid)
         } else {
           message.error(res2.data.errmsg)
         }
