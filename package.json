@@ -1,93 +1,20 @@
 {
-  "_args": [
-    [
-      {
-        "raw": "yapi-plugin-import-rap",
-        "scope": null,
-        "escapedName": "yapi-plugin-import-rap",
-        "name": "yapi-plugin-import-rap",
-        "rawSpec": "",
-        "spec": "latest",
-        "type": "tag"
-      },
-      "d:\\Code_JS\\yapi\\vendors"
-    ]
-  ],
-  "_cnpm_publish_time": 1551695515752,
-  "_from": "yapi-plugin-import-rap@latest",
-  "_hasShrinkwrap": false,
-  "_id": "yapi-plugin-import-rap@0.1.13",
-  "_inCache": true,
-  "_installable": true,
-  "_location": "/yapi-plugin-import-rap",
-  "_nodeVersion": "8.11.1",
-  "_npmOperationalInternal": {
-    "host": "s3://npm-registry-packages",
-    "tmp": "tmp/yapi-plugin-import-rap_0.1.13_1551695515573_0.28076839391294506"
-  },
-  "_npmUser": {
-    "name": "wangxxcarl",
-    "email": "wxxcarl@163.com"
-  },
-  "_npmVersion": "6.4.0",
-  "_phantomChildren": {},
-  "_requested": {
-    "raw": "yapi-plugin-import-rap",
-    "scope": null,
-    "escapedName": "yapi-plugin-import-rap",
-    "name": "yapi-plugin-import-rap",
-    "rawSpec": "",
-    "spec": "latest",
-    "type": "tag"
-  },
-  "_requiredBy": [
-    "#USER"
-  ],
-  "_resolved": "https://registry.npm.taobao.org/yapi-plugin-import-rap/download/yapi-plugin-import-rap-0.1.13.tgz",
-  "_shasum": "aef3debffe1e0f1e2a5e0d4b6bed61471dce3a64",
-  "_shrinkwrap": null,
-  "_spec": "yapi-plugin-import-rap",
-  "_where": "d:\\Code_JS\\yapi\\vendors",
-  "bugs": {
-    "url": "https://github.com/wxxcarl/yapi-plugin-import-rap/issues"
-  },
-  "dependencies": {},
-  "description": "a yapi plugin for import projects from rap1",
-  "devDependencies": {},
-  "directories": {},
-  "dist": {
-    "shasum": "aef3debffe1e0f1e2a5e0d4b6bed61471dce3a64",
-    "size": 4886,
-    "noattachment": false,
-    "tarball": "http://registry.npm.taobao.org/yapi-plugin-import-rap/download/yapi-plugin-import-rap-0.1.13.tgz"
-  },
-  "gitHead": "5d00f20bb06be1311a97a99a9977b4babb67339a",
-  "homepage": "https://github.com/wxxcarl/yapi-plugin-import-rap#readme",
   "key": "yapi-plugin",
+  "name": "yapi-plugin-import-rap",
+  "version": "0.1.13",
+  "description": "a yapi plugin for import projects from rap1",
+  "main": "index.js",
   "keywords": [
     "yapi",
     "rap",
     "plugin",
     "import"
   ],
-  "main": "index.js",
-  "maintainers": [
-    {
-      "name": "wangxxcarl",
-      "email": "wxxcarl@163.com"
-    }
-  ],
-  "name": "yapi-plugin-import-rap",
-  "optionalDependencies": {},
-  "publish_time": 1551695515752,
-  "readme": "ERROR: No README data found!",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wxxcarl/yapi-plugin-import-rap.git"
   },
   "scripts": {
-    "dev": "node index.js",
-    "start": "node server.js"
-  },
-  "version": "0.1.13"
+    "dev": "node index.js"
+  }
 }
